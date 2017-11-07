@@ -47,6 +47,14 @@ class CreateLink extends Component {
         url,
         postedById,
       },
+      update: (store, { data: { createLink } }) => {
+        const data = store.readQuery({ query: ALL_LINKS_QUERY })
+        data.allLinks.splice(0, 0, createLink)
+        store.writeQuery({
+          query: ALL_LINKS_QUERY,
+          data,
+        })
+      },
     })
     this.props.history.push(`/`)
   }
