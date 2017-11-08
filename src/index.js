@@ -7,7 +7,9 @@ import registerServiceWorker from './registerServiceWorker'
 import { ApolloProvider } from 'react-apollo'
 import { ApolloClient } from 'apollo-client'
 import { GC_AUTH_TOKEN } from './constants'
-import { ApolloLink } from 'apollo-client-preset'
+import { ApolloLink, split } from 'apollo-client-preset'
+import { WebSocketLink } from 'apollo-link-ws'
+import { getMainDefinition } from 'apollo-utilities'
 import { HttpLink } from 'apollo-link-http'
 import { InMemoryCache } from 'apollo-cache-inmemory'
 import { BrowserRouter } from 'react-router-dom'
@@ -28,11 +30,29 @@ const middlewareAuthLink = new ApolloLink((operation, forward) => {
 
 const httpLinkWithAuthToken = middlewareAuthLink.concat(httpLink)
 // 3
-const client = new ApolloClient({
-  link: httpLinkWithAuthToken,
-  cache: new InMemoryCache(),
+const wsLink = new WebSocketLink({
+  uri: ``,
+  options: {
+    reconnect: true,
+    connectionParams: {
+      authToken: localStorage.getItem(GC_AUTH_TOKEN),
+    },
+  },
 })
 
+const link = split(
+  ({ query }) => {
+    const { kind, operation } = getMainDefinition(query)
+    return kind === 'OperationDefinition' && operation === 'subscription'
+  },
+  wsLink,
+  httpLinkWithAuthToken
+)
+
+const client = new ApolloClient({
+  link,
+  cache: new InMemoryCache(),
+})
 // 4
 
 ReactDOM.render(
